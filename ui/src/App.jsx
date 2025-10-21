@@ -5,6 +5,19 @@ import AdminScreen from "./components/AdminScreen.jsx";
 
 function App() {
     const [currentScreen, setCurrentScreen] = useState("order"); // 'order' 또는 'admin'
+    const [orders, setOrders] = useState([]); // 주문 데이터를 App 레벨에서 관리
+
+    // 주문 완료 처리
+    const handleOrderComplete = (cartItems, totalAmount) => {
+        const newOrder = {
+            id: Date.now(),
+            orderTime: new Date(),
+            items: cartItems,
+            totalAmount: totalAmount,
+            status: "RECEIVED", // 관리자 화면에서 사용할 상태
+        };
+        setOrders((prev) => [newOrder, ...prev]);
+    };
 
     return (
         <div className="app">
@@ -35,7 +48,11 @@ function App() {
 
             {/* 메인 콘텐츠 */}
             <main className="main-content">
-                {currentScreen === "order" ? <OrderScreen /> : <AdminScreen />}
+                {currentScreen === "order" ? (
+                    <OrderScreen onOrderComplete={handleOrderComplete} />
+                ) : (
+                    <AdminScreen orders={orders} setOrders={setOrders} />
+                )}
             </main>
         </div>
     );

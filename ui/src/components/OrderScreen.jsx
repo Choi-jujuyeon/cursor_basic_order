@@ -40,7 +40,7 @@ const options = [
     { id: "syrup", name: "시럽 추가", price: 0 },
 ];
 
-function OrderScreen() {
+function OrderScreen({ onOrderComplete }) {
     const [cart, setCart] = useState([]);
     const [menuSelections, setMenuSelections] = useState({});
 
@@ -257,6 +257,13 @@ function OrderScreen() {
                                     disabled={cart.length === 0}
                                     onClick={() => {
                                         if (cart.length > 0) {
+                                            // 주문 완료 시 부모 컴포넌트에 전달
+                                            if (onOrderComplete) {
+                                                onOrderComplete(
+                                                    cart,
+                                                    getTotalPrice()
+                                                );
+                                            }
                                             alert(
                                                 `주문이 완료되었습니다!\n총 금액: ${getTotalPrice().toLocaleString()}원`
                                             );

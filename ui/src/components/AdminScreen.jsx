@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 
 // 메뉴 데이터 (주문하기 화면과 동일)
 const menuItems = [
@@ -26,7 +26,7 @@ const ORDER_STATUS = {
     COMPLETED: "제조 완료",
 };
 
-function AdminScreen() {
+function AdminScreen({ orders = [], setOrders }) {
     // 재고 상태 관리
     const [inventory, setInventory] = useState({
         1: { name: "아메리카노(ICE)", stock: 10 },
@@ -34,33 +34,48 @@ function AdminScreen() {
         3: { name: "카페라떼", stock: 10 },
     });
 
-    // 주문 상태 관리
-    const [orders, setOrders] = useState([
-        {
-            id: 1,
-            orderTime: new Date("2024-07-31T13:00:00"),
-            items: [
-                {
-                    menuId: 1,
-                    name: "아메리카노(ICE)",
-                    quantity: 1,
-                    price: 4000,
-                },
-            ],
-            totalAmount: 4000,
-            status: ORDER_STATUS.RECEIVED,
-        },
-    ]);
+    // 주문 상태 관리 - props로 받은 orders 사용, 기본값으로 테스트 주문 1개
+    const [localOrders, setLocalOrders] = useState(
+        orders.length > 0
+            ? orders
+            : [
+                  {
+                      id: 1,
+                      orderTime: new Date("2024-07-31T13:00:00"),
+                      items: [
+                          {
+                              menuId: 1,
+                              name: "아메리카노(ICE)",
+                              quantity: 1,
+                              price: 4000,
+                          },
+                      ],
+                      totalAmount: 4000,
+                      status: ORDER_STATUS.RECEIVED,
+                  },
+              ]
+    );
+
+    // props로 받은 orders가 변경되면 로컬 상태도 업데이트
+    React.useEffect(() => {
+        if (orders.length > 0) {
+            setLocalOrders(orders);
+        }
+    }, [orders]);
+
+    // orders 변수 사용을 localOrders로 변경
+    const ordersToUse = orders.length > 0 ? orders : localOrders;
 
     // 주문 통계 계산
     const orderStats = {
-        total: orders.length,
-        received: orders.filter(
+        total: ordersToUse.length,
+        received: ordersToUse.filter(
             (order) => order.status === ORDER_STATUS.RECEIVED
         ).length,
-        making: orders.filter((order) => order.status === ORDER_STATUS.MAKING)
-            .length,
-        completed: orders.filter(
+        making: ordersToUse.filter(
+            (order) => order.status === ORDER_STATUS.MAKING
+        ).length,
+        completed: ordersToUse.filter(
             (order) => order.status === ORDER_STATUS.COMPLETED
         ).length,
     };
@@ -110,7 +125,7 @@ function AdminScreen() {
 
     // 주문 상태 변경
     const updateOrderStatus = (orderId) => {
-        setOrders((prev) =>
+        const updateFn = (prev) =>
             prev.map((order) => {
                 if (order.id === orderId) {
                     let newStatus;
@@ -127,8 +142,14 @@ function AdminScreen() {
                     return { ...order, status: newStatus };
                 }
                 return order;
-            })
-        );
+            });
+
+        // props로 받은 setOrders가 있으면 사용, 없으면 로컬 상태 업데이트
+        if (setOrders) {
+            setOrders(updateFn);
+        } else {
+            setLocalOrders(updateFn);
+        }
     };
 
     // 주문 상태 버튼 텍스트
@@ -161,7 +182,13 @@ function AdminScreen() {
             totalAmount: menuItems[Math.floor(Math.random() * 3)].price,
             status: ORDER_STATUS.RECEIVED,
         };
-        setOrders((prev) => [newOrder, ...prev]);
+
+        // props로 받은 setOrders가 있으면 사용, 없으면 로컬 상태 업데이트
+        if (setOrders) {
+            setOrders((prev) => [newOrder, ...prev]);
+        } else {
+            setLocalOrders((prev) => [newOrder, ...prev]);
+        }
     };
 
     // 날짜 포맷팅
@@ -265,10 +292,10 @@ function AdminScreen() {
                     </button>
                 </div>
                 <div className="orders-list">
-                    {orders.length === 0 ? (
+                    {ordersToUse.length === 0 ? (
                         <p className="no-orders">주문이 없습니다.</p>
                     ) : (
-                        orders.map((order) => (
+                        ordersToUse.map((order) => (
                             <div key={order.id} className="order-card">
                                 <div className="order-info">
                                     <div className="order-time">
