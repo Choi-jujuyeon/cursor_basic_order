@@ -1,6 +1,7 @@
 import { useState } from "react";
 import "./App.css";
 import OrderScreen from "./components/OrderScreen.jsx";
+import AdminScreen from "./components/AdminScreen.jsx";
 
 function App() {
     const [currentScreen, setCurrentScreen] = useState("order"); // 'order' 또는 'admin'
@@ -34,14 +35,7 @@ function App() {
 
             {/* 메인 콘텐츠 */}
             <main className="main-content">
-                {currentScreen === "order" ? (
-                    <OrderScreen />
-                ) : (
-                    <div>
-                        <h2>관리자 화면 (개발 중)</h2>
-                        <p>관리자 화면이 여기에 구현될 예정입니다.</p>
-                    </div>
-                )}
+                {currentScreen === "order" ? <OrderScreen /> : <AdminScreen />}
             </main>
         </div>
     );
