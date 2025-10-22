@@ -1,5 +1,7 @@
 // API 기본 설정
-const API_BASE_URL = "http://localhost:3001/api";
+const API_BASE_URL = import.meta.env.PROD
+    ? "https://your-render-app-name.onrender.com/api" // Render 배포 URL로 변경 필요
+    : "http://localhost:3001/api";
 
 // 공통 API 호출 함수
 const apiCall = async (endpoint, options = {}) => {

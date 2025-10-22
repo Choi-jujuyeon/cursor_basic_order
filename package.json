@@ -1,0 +1,23 @@
+{
+    "name": "coffee-order-app",
+    "version": "1.0.0",
+    "description": "커피 주문 앱 - 프론트엔드와 백엔드",
+    "scripts": {
+        "build": "cd ui && npm install && npm run build",
+        "start": "cd server && npm install && npm start",
+        "dev": "concurrently \"cd ui && npm run dev\" \"cd server && npm run dev\"",
+        "setup-render": "cd server && npm run setup-render"
+    },
+    "keywords": [
+        "coffee",
+        "order",
+        "react",
+        "express",
+        "postgresql"
+    ],
+    "author": "",
+    "license": "ISC",
+    "devDependencies": {
+        "concurrently": "^8.2.2"
+    }
+}

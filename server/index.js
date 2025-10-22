@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 const { testConnection } = require("./config/database");
+const { setupRenderDatabase } = require("./scripts/setupRenderDatabase");
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -54,13 +55,26 @@ app.listen(PORT, async () => {
     console.log(`서버가 포트 ${PORT}에서 실행 중입니다.`);
     console.log(`http://localhost:${PORT}`);
 
-    // 데이터베이스 연결 테스트
-    const isConnected = await testConnection();
-    if (isConnected) {
-        console.log("✅ 데이터베이스 연결이 성공적으로 설정되었습니다.");
-    } else {
-        console.log(
-            "❌ 데이터베이스 연결에 실패했습니다. .env 파일을 확인해주세요."
-        );
+    try {
+        // 데이터베이스 연결 테스트
+        const isConnected = await testConnection();
+        if (isConnected) {
+            console.log("✅ 데이터베이스 연결이 성공적으로 설정되었습니다.");
+
+            // Render 환경에서 데이터베이스 스키마 자동 설정
+            if (process.env.NODE_ENV === "production") {
+                console.log(
+                    "🚀 Render 환경에서 데이터베이스 스키마 설정 중..."
+                );
+                await setupRenderDatabase();
+                console.log("✅ 데이터베이스 스키마 설정 완료");
+            }
+        } else {
+            console.log(
+                "❌ 데이터베이스 연결에 실패했습니다. .env 파일을 확인해주세요."
+            );
+        }
+    } catch (error) {
+        console.error("서버 시작 중 오류:", error);
     }
 });
