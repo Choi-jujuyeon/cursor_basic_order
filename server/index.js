@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
+const { testConnection } = require("./config/database");
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -49,7 +50,17 @@ app.use((req, res) => {
     });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
     console.log(`서버가 포트 ${PORT}에서 실행 중입니다.`);
     console.log(`http://localhost:${PORT}`);
+
+    // 데이터베이스 연결 테스트
+    const isConnected = await testConnection();
+    if (isConnected) {
+        console.log("✅ 데이터베이스 연결이 성공적으로 설정되었습니다.");
+    } else {
+        console.log(
+            "❌ 데이터베이스 연결에 실패했습니다. .env 파일을 확인해주세요."
+        );
+    }
 });

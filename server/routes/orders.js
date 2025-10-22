@@ -1,53 +1,46 @@
 const express = require("express");
 const router = express.Router();
-
-// 임시 메뉴 데이터 (메뉴 이름 조회용)
-const menuData = {
-    1: { name: "아메리카노(ICE)" },
-    2: { name: "아메리카노(HOT)" },
-    3: { name: "카페라떼" },
-};
-
-// 임시 주문 데이터 (실제로는 데이터베이스에서 관리)
-let orders = [
-    {
-        id: 1,
-        order_time: "2024-07-31T13:00:00.000Z",
-        status: "RECEIVED",
-        total_amount: 4000,
-        items: [
-            {
-                id: 1001,
-                menu_id: 1,
-                quantity: 1,
-                unit_price: 4000,
-                options: [],
-            },
-        ],
-    },
-];
-let nextOrderId = 2;
+const { pool } = require("../config/database");
 
 // GET /api/orders - 주문 목록 조회
-router.get("/", (req, res) => {
+router.get("/", async (req, res) => {
+    const client = await pool.connect();
+
     try {
-        // 최신 주문부터 정렬하고 메뉴 이름 포함
-        const sortedOrders = [...orders]
-            .sort((a, b) => new Date(b.order_time) - new Date(a.order_time))
-            .map((order) => ({
-                ...order,
-                items: order.items.map((item) => ({
-                    ...item,
-                    menu_name:
-                        menuData[item.menu_id]?.name || "알 수 없는 메뉴",
-                })),
-            }));
+        const query = `
+            SELECT 
+                o.id,
+                o.order_time,
+                o.status,
+                o.total_amount,
+                COALESCE(
+                    json_agg(
+                        json_build_object(
+                            'id', oi.id,
+                            'menu_id', oi.menu_id,
+                            'menu_name', m.name,
+                            'quantity', oi.quantity,
+                            'unit_price', oi.unit_price,
+                            'options', oi.options
+                        )
+                    ) FILTER (WHERE oi.id IS NOT NULL),
+                    '[]'::json
+                ) as items
+            FROM orders o
+            LEFT JOIN order_items oi ON o.id = oi.order_id
+            LEFT JOIN menus m ON oi.menu_id = m.id
+            GROUP BY o.id, o.order_time, o.status, o.total_amount
+            ORDER BY o.order_time DESC
+        `;
+
+        const result = await client.query(query);
 
         res.json({
             success: true,
-            data: sortedOrders,
+            data: result.rows,
         });
     } catch (error) {
+        console.error("주문 조회 오류:", error);
         res.status(500).json({
             success: false,
             error: {
@@ -56,16 +49,47 @@ router.get("/", (req, res) => {
                 details: error.message,
             },
         });
+    } finally {
+        client.release();
     }
 });
 
 // GET /api/orders/:id - 특정 주문 조회
-router.get("/:id", (req, res) => {
+router.get("/:id", async (req, res) => {
+    const client = await pool.connect();
+
     try {
         const orderId = parseInt(req.params.id);
-        const order = orders.find((o) => o.id === orderId);
 
-        if (!order) {
+        const query = `
+            SELECT 
+                o.id,
+                o.order_time,
+                o.status,
+                o.total_amount,
+                COALESCE(
+                    json_agg(
+                        json_build_object(
+                            'id', oi.id,
+                            'menu_id', oi.menu_id,
+                            'menu_name', m.name,
+                            'quantity', oi.quantity,
+                            'unit_price', oi.unit_price,
+                            'options', oi.options
+                        )
+                    ) FILTER (WHERE oi.id IS NOT NULL),
+                    '[]'::json
+                ) as items
+            FROM orders o
+            LEFT JOIN order_items oi ON o.id = oi.order_id
+            LEFT JOIN menus m ON oi.menu_id = m.id
+            WHERE o.id = $1
+            GROUP BY o.id, o.order_time, o.status, o.total_amount
+        `;
+
+        const result = await client.query(query, [orderId]);
+
+        if (result.rows.length === 0) {
             return res.status(404).json({
                 success: false,
                 error: {
@@ -76,20 +100,12 @@ router.get("/:id", (req, res) => {
             });
         }
 
-        // 메뉴 이름 포함하여 응답
-        const orderWithMenuNames = {
-            ...order,
-            items: order.items.map((item) => ({
-                ...item,
-                menu_name: menuData[item.menu_id]?.name || "알 수 없는 메뉴",
-            })),
-        };
-
         res.json({
             success: true,
-            data: orderWithMenuNames,
+            data: result.rows[0],
         });
     } catch (error) {
+        console.error("주문 조회 오류:", error);
         res.status(500).json({
             success: false,
             error: {
@@ -98,11 +114,15 @@ router.get("/:id", (req, res) => {
                 details: error.message,
             },
         });
+    } finally {
+        client.release();
     }
 });
 
 // POST /api/orders - 새 주문 생성
-router.post("/", (req, res) => {
+router.post("/", async (req, res) => {
+    const client = await pool.connect();
+
     try {
         const { items, total_amount } = req.body;
 
@@ -133,30 +153,81 @@ router.post("/", (req, res) => {
             });
         }
 
-        // 주문 생성
-        const newOrder = {
-            id: nextOrderId++,
-            order_time: new Date().toISOString(),
-            status: "RECEIVED",
-            total_amount: total_amount,
-            items: items.map((item) => ({
-                id: Date.now() + Math.random(), // 임시 ID
-                menu_id: item.menu_id,
-                quantity: item.quantity,
-                unit_price: item.unit_price,
-                options: item.options || [],
-            })),
-        };
+        // 트랜잭션 시작
+        await client.query("BEGIN");
 
-        // 주문 목록에 추가
-        orders.push(newOrder);
+        try {
+            // 주문 생성
+            const orderQuery = `
+                INSERT INTO orders (total_amount, status)
+                VALUES ($1, 'RECEIVED')
+                RETURNING id, order_time, status, total_amount
+            `;
 
-        res.status(201).json({
-            success: true,
-            data: newOrder,
-            message: "주문이 성공적으로 생성되었습니다.",
-        });
+            const orderResult = await client.query(orderQuery, [total_amount]);
+            const orderId = orderResult.rows[0].id;
+
+            // 주문 아이템들 생성
+            for (const item of items) {
+                const itemQuery = `
+                    INSERT INTO order_items (order_id, menu_id, quantity, unit_price, options)
+                    VALUES ($1, $2, $3, $4, $5)
+                    RETURNING id
+                `;
+
+                await client.query(itemQuery, [
+                    orderId,
+                    item.menu_id,
+                    item.quantity,
+                    item.unit_price,
+                    JSON.stringify(item.options || []),
+                ]);
+            }
+
+            // 트랜잭션 커밋
+            await client.query("COMMIT");
+
+            // 생성된 주문 정보 조회
+            const finalQuery = `
+                SELECT 
+                    o.id,
+                    o.order_time,
+                    o.status,
+                    o.total_amount,
+                    COALESCE(
+                        json_agg(
+                            json_build_object(
+                                'id', oi.id,
+                                'menu_id', oi.menu_id,
+                                'menu_name', m.name,
+                                'quantity', oi.quantity,
+                                'unit_price', oi.unit_price,
+                                'options', oi.options
+                            )
+                        ) FILTER (WHERE oi.id IS NOT NULL),
+                        '[]'::json
+                    ) as items
+                FROM orders o
+                LEFT JOIN order_items oi ON o.id = oi.order_id
+                LEFT JOIN menus m ON oi.menu_id = m.id
+                WHERE o.id = $1
+                GROUP BY o.id, o.order_time, o.status, o.total_amount
+            `;
+
+            const finalResult = await client.query(finalQuery, [orderId]);
+
+            res.status(201).json({
+                success: true,
+                data: finalResult.rows[0],
+                message: "주문이 성공적으로 생성되었습니다.",
+            });
+        } catch (error) {
+            // 트랜잭션 롤백
+            await client.query("ROLLBACK");
+            throw error;
+        }
     } catch (error) {
+        console.error("주문 생성 오류:", error);
         res.status(500).json({
             success: false,
             error: {
@@ -165,11 +236,15 @@ router.post("/", (req, res) => {
                 details: error.message,
             },
         });
+    } finally {
+        client.release();
     }
 });
 
 // PUT /api/orders/:id/status - 주문 상태 변경
-router.put("/:id/status", (req, res) => {
+router.put("/:id/status", async (req, res) => {
+    const client = await pool.connect();
+
     try {
         const orderId = parseInt(req.params.id);
         const { status } = req.body;
@@ -190,8 +265,11 @@ router.put("/:id/status", (req, res) => {
             });
         }
 
-        const orderIndex = orders.findIndex((o) => o.id === orderId);
-        if (orderIndex === -1) {
+        // 주문 존재 여부 확인
+        const checkQuery = "SELECT id FROM orders WHERE id = $1";
+        const checkResult = await client.query(checkQuery, [orderId]);
+
+        if (checkResult.rows.length === 0) {
             return res.status(404).json({
                 success: false,
                 error: {
@@ -203,17 +281,25 @@ router.put("/:id/status", (req, res) => {
         }
 
         // 주문 상태 업데이트
-        orders[orderIndex].status = status;
+        const updateQuery = `
+            UPDATE orders 
+            SET status = $1, updated_at = CURRENT_TIMESTAMP 
+            WHERE id = $2 
+            RETURNING id, status
+        `;
+
+        const result = await client.query(updateQuery, [status, orderId]);
 
         res.json({
             success: true,
             data: {
-                id: orderId,
-                status: status,
+                id: result.rows[0].id,
+                status: result.rows[0].status,
                 message: "주문 상태가 성공적으로 업데이트되었습니다.",
             },
         });
     } catch (error) {
+        console.error("주문 상태 업데이트 오류:", error);
         res.status(500).json({
             success: false,
             error: {
@@ -222,6 +308,8 @@ router.put("/:id/status", (req, res) => {
                 details: error.message,
             },
         });
+    } finally {
+        client.release();
     }
 });
 
