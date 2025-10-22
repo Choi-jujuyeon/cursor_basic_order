@@ -50,6 +50,24 @@ function OrderScreen({ onOrderComplete }) {
         }
     };
 
+    // 메뉴 이미지 URL 반환 함수
+    const getMenuImage = (menuName) => {
+        const imageMap = {
+            아메리카노:
+                "https://i.namu.wiki/i/ERJ1oNENo-sKv8s64iH6NNm5AZP2nfEy9vmYZBTATZR6DL83gyN62e-knrfQHXK3AGGop7ySNP1yqCznAKMn-Q.webp",
+            카페라떼:
+                "https://d2afncas1tel3t.cloudfront.net/wp-content/uploads/2023/10/%E1%84%8B%E1%85%A1%E1%84%8B%E1%85%B5%E1%84%89%E1%85%B3%E1%84%85%E1%85%A1%E1%84%84%E1%85%A6-1280x1280-2-1280x1280.jpg",
+            카푸치노:
+                "https://images.unsplash.com/photo-1572442388796-11668a67e53d?w=300&h=200&fit=crop",
+            "카라멜 마키아토":
+                "https://cdn.imweb.me/upload/S201904245cbfeaeb57b7d/62c79ee2d07f0.jpg",
+        };
+        return (
+            imageMap[menuName] ||
+            "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=300&h=200&fit=crop"
+        );
+    };
+
     // 메뉴 데이터 새로고침
     const refreshMenuData = async () => {
         try {
@@ -326,7 +344,22 @@ function OrderScreen({ onOrderComplete }) {
                                 }`}
                             >
                                 <div className="menu-image">
-                                    <div className="image-placeholder">☕</div>
+                                    <img
+                                        src={getMenuImage(item.name)}
+                                        alt={item.name}
+                                        className="menu-img"
+                                        onError={(e) => {
+                                            e.target.style.display = "none";
+                                            e.target.nextSibling.style.display =
+                                                "flex";
+                                        }}
+                                    />
+                                    <div
+                                        className="image-placeholder"
+                                        style={{ display: "none" }}
+                                    >
+                                        ☕
+                                    </div>
                                     {isOutOfStock(item) && (
                                         <div className="out-of-stock-overlay">
                                             <span>품절</span>
