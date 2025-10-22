@@ -2,7 +2,7 @@
 const API_BASE_URL =
     import.meta.env.VITE_API_BASE_URL ||
     (import.meta.env.PROD
-        ? "https://order-app-backend-y1gx.onrender.com/api"
+        ? "https://cursor-basic-order.onrender.com/api"
         : "http://localhost:3001/api");
 
 // 공통 API 호출 함수
