@@ -157,6 +157,32 @@ router.post("/", async (req, res) => {
         await client.query("BEGIN");
 
         try {
+            // 재고 확인 및 차감
+            for (const item of items) {
+                // 현재 재고 확인
+                const stockCheckQuery = `
+                    SELECT stock FROM menus WHERE id = $1
+                `;
+                const stockResult = await client.query(stockCheckQuery, [item.menu_id]);
+                
+                if (stockResult.rows.length === 0) {
+                    throw new Error(`메뉴 ID ${item.menu_id}를 찾을 수 없습니다.`);
+                }
+                
+                const currentStock = stockResult.rows[0].stock;
+                if (currentStock < item.quantity) {
+                    throw new Error(`재고가 부족합니다. 요청: ${item.quantity}, 현재 재고: ${currentStock}`);
+                }
+                
+                // 재고 차감
+                const updateStockQuery = `
+                    UPDATE menus 
+                    SET stock = stock - $1, updated_at = CURRENT_TIMESTAMP 
+                    WHERE id = $2
+                `;
+                await client.query(updateStockQuery, [item.quantity, item.menu_id]);
+            }
+
             // 주문 생성
             const orderQuery = `
                 INSERT INTO orders (total_amount, status)

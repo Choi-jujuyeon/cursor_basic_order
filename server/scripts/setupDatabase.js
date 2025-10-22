@@ -92,17 +92,10 @@ const insertInitialData = async () => {
         // 메뉴 데이터 삽입
         const menuQueries = [
             {
-                name: "아메리카노(ICE)",
-                description: "깔끔한 에스프레소와 차가운 물의 조화",
+                name: "아메리카노",
+                description: "깔끔한 에스프레소와 물의 조화",
                 price: 4000,
-                image_url: "/images/americano-ice.jpg",
-                stock: 10,
-            },
-            {
-                name: "아메리카노(HOT)",
-                description: "따뜻한 에스프레소와 뜨거운 물의 조화",
-                price: 4000,
-                image_url: "/images/americano-hot.jpg",
+                image_url: "/images/americano.jpg",
                 stock: 10,
             },
             {
@@ -112,14 +105,31 @@ const insertInitialData = async () => {
                 image_url: "/images/cafelatte.jpg",
                 stock: 10,
             },
+            {
+                name: "카푸치노",
+                description: "진한 에스프레소와 풍부한 우유 거품",
+                price: 5000,
+                image_url: "/images/cappuccino.jpg",
+                stock: 10,
+            },
+            {
+                name: "카라멜 마키아토",
+                description: "달콤한 카라멜 시럽이 어우러진 라떼",
+                price: 6000,
+                image_url: "/images/caramel-macchiato.jpg",
+                stock: 10,
+            },
         ];
 
+        // 메뉴 삽입 및 ID 수집
+        const menuIds = [];
         for (const menu of menuQueries) {
-            await client.query(
+            const result = await client.query(
                 `
                 INSERT INTO menus (name, description, price, image_url, stock)
                 VALUES ($1, $2, $3, $4, $5)
                 ON CONFLICT DO NOTHING
+                RETURNING id
             `,
                 [
                     menu.name,
@@ -129,18 +139,32 @@ const insertInitialData = async () => {
                     menu.stock,
                 ]
             );
+
+            if (result.rows.length > 0) {
+                menuIds.push(result.rows[0].id);
+            } else {
+                // 이미 존재하는 경우 ID 조회
+                const existingMenu = await client.query(
+                    "SELECT id FROM menus WHERE name = $1",
+                    [menu.name]
+                );
+                if (existingMenu.rows.length > 0) {
+                    menuIds.push(existingMenu.rows[0].id);
+                }
+            }
         }
         console.log("✅ 메뉴 데이터 삽입 완료");
 
-        // 옵션 데이터 삽입
-        const optionQueries = [
-            { name: "샷 추가", price: 500, menu_id: 1 },
-            { name: "시럽 추가", price: 0, menu_id: 1 },
-            { name: "샷 추가", price: 500, menu_id: 2 },
-            { name: "시럽 추가", price: 0, menu_id: 2 },
-            { name: "샷 추가", price: 500, menu_id: 3 },
-            { name: "시럽 추가", price: 0, menu_id: 3 },
-        ];
+        // 옵션 데이터 삽입 (실제 메뉴 ID 사용)
+        const optionQueries = [];
+        menuIds.forEach((menuId, index) => {
+            optionQueries.push(
+                { name: "ICE", price: 0, menu_id: menuId },
+                { name: "HOT", price: 0, menu_id: menuId },
+                { name: "샷 추가", price: 500, menu_id: menuId },
+                { name: "시럽 추가", price: 0, menu_id: menuId }
+            );
+        });
 
         for (const option of optionQueries) {
             await client.query(
