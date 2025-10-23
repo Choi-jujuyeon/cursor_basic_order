@@ -10,9 +10,10 @@ const pool = new Pool({
         }@${process.env.DB_HOST || "localhost"}:${
             process.env.DB_PORT || 5432
         }/${process.env.DB_NAME || "coffee_order_app"}`,
-    ssl: process.env.NODE_ENV === "production" ? {
-        rejectUnauthorized: false
-    } : false,
+    ssl: {
+        require: true,
+        rejectUnauthorized: false,
+    },
     max: parseInt(process.env.DB_MAX_CONNECTIONS) || 20,
     idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT_MILLIS) || 30000,
     connectionTimeoutMillis:
@@ -34,7 +35,7 @@ const testConnection = async () => {
         console.log("데이터베이스 연결 테스트 시작...");
         console.log("NODE_ENV:", process.env.NODE_ENV);
         console.log("DATABASE_URL 존재:", !!process.env.DATABASE_URL);
-        
+
         const client = await pool.connect();
         const result = await client.query("SELECT NOW()");
         console.log("데이터베이스 연결 성공:", result.rows[0]);
