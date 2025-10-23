@@ -5,9 +5,12 @@ const pool = new Pool({
     connectionString:
         process.env.DATABASE_URL ||
         "postgresql://coffee_user:BlOWEL6QWcNqwlqzln06qvFk7IbW4wnl@dpg-d3st6424d50c73el2gg0-a.oregon-postgres.render.com:5432/coffee_order_db_gll7",
-    ssl: {
-        rejectUnauthorized: false,
-    },
+    ssl:
+        process.env.NODE_ENV === "production"
+            ? {
+                  rejectUnauthorized: false,
+              }
+            : false,
 });
 
 async function setupRenderDatabase() {
