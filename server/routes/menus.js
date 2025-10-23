@@ -4,9 +4,19 @@ const { pool } = require("../config/database");
 
 // GET /api/menus - 메뉴 목록 조회
 router.get("/", async (req, res) => {
-    const client = await pool.connect();
-
+    let client;
+    
     try {
+        console.log("메뉴 조회 시작 - 데이터베이스 연결 시도...");
+        
+        // 데이터베이스 연결 테스트
+        client = await pool.connect();
+        console.log("데이터베이스 연결 성공");
+        
+        // 연결 테스트 쿼리
+        await client.query("SELECT 1");
+        console.log("데이터베이스 쿼리 테스트 성공");
+        
         // 메뉴와 옵션을 함께 조회
         const query = `
             SELECT 
@@ -32,7 +42,9 @@ router.get("/", async (req, res) => {
             ORDER BY m.id
         `;
 
+        console.log("메뉴 조회 쿼리 실행 중...");
         const result = await client.query(query);
+        console.log(`메뉴 조회 성공: ${result.rows.length}개 메뉴`);
 
         res.json({
             success: true,
@@ -40,6 +52,12 @@ router.get("/", async (req, res) => {
         });
     } catch (error) {
         console.error("메뉴 조회 오류:", error);
+        console.error("오류 상세:", {
+            message: error.message,
+            code: error.code,
+            stack: error.stack
+        });
+        
         res.status(500).json({
             success: false,
             error: {
@@ -49,7 +67,10 @@ router.get("/", async (req, res) => {
             },
         });
     } finally {
-        client.release();
+        if (client) {
+            client.release();
+            console.log("데이터베이스 연결 해제");
+        }
     }
 });
 
