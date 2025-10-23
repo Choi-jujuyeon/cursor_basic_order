@@ -8,7 +8,7 @@ const pool = new Pool({
     ssl: {
         rejectUnauthorized: false,
         sslmode: "require",
-        ssl: true
+        ssl: true,
     },
 });
 
