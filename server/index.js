@@ -19,6 +19,28 @@ app.get("/", (req, res) => {
     });
 });
 
+// 데이터베이스 스키마 생성 엔드포인트 (수동 실행용)
+app.post("/setup-database", async (req, res) => {
+    try {
+        console.log("수동 데이터베이스 스키마 생성 시작...");
+        await setupRenderDatabase();
+        res.json({
+            success: true,
+            message: "데이터베이스 스키마가 성공적으로 생성되었습니다.",
+        });
+    } catch (error) {
+        console.error("데이터베이스 스키마 생성 오류:", error);
+        res.status(500).json({
+            success: false,
+            error: {
+                code: "DATABASE_SETUP_ERROR",
+                message: "데이터베이스 스키마 생성 중 오류가 발생했습니다.",
+                details: error.message,
+            },
+        });
+    }
+});
+
 // API 라우트 설정
 app.use("/api/menus", require("./routes/menus"));
 app.use("/api/orders", require("./routes/orders"));
