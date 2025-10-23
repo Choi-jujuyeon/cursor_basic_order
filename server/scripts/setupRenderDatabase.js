@@ -2,19 +2,22 @@ const { Pool } = require("pg");
 
 // Render PostgreSQL 데이터베이스 연결 설정
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
+    connectionString:
+        process.env.DATABASE_URL ||
+        "postgresql://coffee_user:BlOWEL6QWcNqwlqzln06qvFk7IbW4wnl@dpg-d3st6424d50c73el2gg0-a.oregon-postgres.render.com:5432/coffee_order_db_gll7",
     ssl: {
         rejectUnauthorized: false,
+        sslmode: 'require'
     },
 });
 
 async function setupRenderDatabase() {
-    if (!process.env.DATABASE_URL) {
-        throw new Error("DATABASE_URL 환경 변수가 설정되지 않았습니다.");
-    }
+    const connectionString =
+        process.env.DATABASE_URL ||
+        "postgresql://coffee_user:BlOWEL6QWcNqwlqzln06qvFk7IbW4wnl@dpg-d3st6424d50c73el2gg0-a.oregon-postgres.render.com:5432/coffee_order_db_gll7";
 
-    console.log("DATABASE_URL:", process.env.DATABASE_URL ? "설정됨" : "설정되지 않음");
-    
+    console.log("DATABASE_URL:", connectionString ? "설정됨" : "설정되지 않음");
+
     const client = await pool.connect();
 
     try {

@@ -11,7 +11,8 @@ const pool = new Pool({
             process.env.DB_PORT || 5432
         }/${process.env.DB_NAME || "coffee_order_app"}`,
     ssl: process.env.NODE_ENV === "production" ? {
-        rejectUnauthorized: false
+        rejectUnauthorized: false,
+        sslmode: 'require'
     } : false,
     max: parseInt(process.env.DB_MAX_CONNECTIONS) || 20,
     idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT_MILLIS) || 30000,

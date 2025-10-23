@@ -1,6 +1,18 @@
 const express = require("express");
 const router = express.Router();
-const { pool } = require("../config/database");
+const { Pool } = require("pg");
+
+// 메뉴 라우트용 별도 연결 풀 생성 (SSL 강화)
+const menuPool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.NODE_ENV === "production" ? {
+        rejectUnauthorized: false,
+        sslmode: 'require'
+    } : false,
+    max: 5,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 2000,
+});
 
 // GET /api/menus - 메뉴 목록 조회
 router.get("/", async (req, res) => {
@@ -10,7 +22,7 @@ router.get("/", async (req, res) => {
         console.log("메뉴 조회 시작 - 데이터베이스 연결 시도...");
         
         // 데이터베이스 연결 테스트
-        client = await pool.connect();
+        client = await menuPool.connect();
         console.log("데이터베이스 연결 성공");
         
         // 연결 테스트 쿼리

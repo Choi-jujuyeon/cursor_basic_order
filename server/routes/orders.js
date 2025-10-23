@@ -1,10 +1,22 @@
 const express = require("express");
 const router = express.Router();
-const { pool } = require("../config/database");
+const { Pool } = require("pg");
+
+// 주문 라우트용 별도 연결 풀 생성 (SSL 강화)
+const orderPool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.NODE_ENV === "production" ? {
+        rejectUnauthorized: false,
+        sslmode: 'require'
+    } : false,
+    max: 5,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 2000,
+});
 
 // GET /api/orders - 주문 목록 조회
 router.get("/", async (req, res) => {
-    const client = await pool.connect();
+    const client = await orderPool.connect();
 
     try {
         const query = `
@@ -56,7 +68,7 @@ router.get("/", async (req, res) => {
 
 // GET /api/orders/:id - 특정 주문 조회
 router.get("/:id", async (req, res) => {
-    const client = await pool.connect();
+    const client = await orderPool.connect();
 
     try {
         const orderId = parseInt(req.params.id);
@@ -121,7 +133,7 @@ router.get("/:id", async (req, res) => {
 
 // POST /api/orders - 새 주문 생성
 router.post("/", async (req, res) => {
-    const client = await pool.connect();
+    const client = await orderPool.connect();
 
     try {
         const { items, total_amount } = req.body;
@@ -269,7 +281,7 @@ router.post("/", async (req, res) => {
 
 // PUT /api/orders/:id/status - 주문 상태 변경
 router.put("/:id/status", async (req, res) => {
-    const client = await pool.connect();
+    const client = await orderPool.connect();
 
     try {
         const orderId = parseInt(req.params.id);

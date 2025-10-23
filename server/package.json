@@ -9,6 +9,7 @@
         "create-db": "node scripts/createDatabase.js",
         "setup-db": "node scripts/setupDatabase.js",
         "setup-render": "node scripts/setupRenderDatabase.js",
+        "create-schema": "node scripts/setupRenderDatabase.js",
         "test": "echo \"Error: no test specified\" && exit 1"
     },
     "keywords": [],
