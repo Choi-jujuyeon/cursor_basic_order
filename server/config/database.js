@@ -3,11 +3,19 @@ require("dotenv").config();
 
 // PostgreSQL 연결 풀 생성
 const pool = new Pool({
-    host: process.env.DB_HOST || "localhost",
-    port: process.env.DB_PORT || 5432,
-    database: process.env.DB_NAME || "coffee_order_app",
-    user: process.env.DB_USER || "postgres",
-    password: process.env.DB_PASSWORD,
+    connectionString:
+        process.env.DATABASE_URL ||
+        `postgresql://${process.env.DB_USER || "postgres"}:${
+            process.env.DB_PASSWORD
+        }@${process.env.DB_HOST || "localhost"}:${
+            process.env.DB_PORT || 5432
+        }/${process.env.DB_NAME || "coffee_order_app"}`,
+    ssl:
+        process.env.NODE_ENV === "production"
+            ? {
+                  rejectUnauthorized: false,
+              }
+            : false,
     max: parseInt(process.env.DB_MAX_CONNECTIONS) || 20,
     idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT_MILLIS) || 30000,
     connectionTimeoutMillis:

@@ -2,12 +2,18 @@
 const API_BASE_URL =
     import.meta.env.VITE_API_BASE_URL ||
     (import.meta.env.PROD
-        ? "https://cursor-basic-order.onrender.com/api"
+        ? "https://order-app-backend-y1gx.onrender.com/api"
         : "http://localhost:3001/api");
+
+// 디버깅을 위한 로그 추가
+console.log("API_BASE_URL:", API_BASE_URL);
+console.log("PROD mode:", import.meta.env.PROD);
+console.log("VITE_API_BASE_URL:", import.meta.env.VITE_API_BASE_URL);
 
 // 공통 API 호출 함수
 const apiCall = async (endpoint, options = {}) => {
     try {
+        console.log(`API 호출 시도: ${API_BASE_URL}${endpoint}`);
         const response = await fetch(`${API_BASE_URL}${endpoint}`, {
             headers: {
                 "Content-Type": "application/json",
@@ -16,15 +22,24 @@ const apiCall = async (endpoint, options = {}) => {
             ...options,
         });
 
+        console.log(`API 응답 상태: ${response.status} ${response.statusText}`);
+
         if (!response.ok) {
             const errorData = await response.json();
+            console.error("API 에러 응답:", errorData);
             throw new Error(errorData.error?.message || "API 호출 실패");
         }
 
         const data = await response.json();
+        console.log("API 성공 응답:", data);
         return data;
     } catch (error) {
         console.error("API 호출 오류:", error);
+        console.error("오류 상세:", {
+            message: error.message,
+            stack: error.stack,
+            endpoint: `${API_BASE_URL}${endpoint}`,
+        });
         throw error;
     }
 };
