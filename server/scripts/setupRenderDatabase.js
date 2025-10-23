@@ -2,15 +2,19 @@ const { Pool } = require("pg");
 
 // Render PostgreSQL 데이터베이스 연결 설정
 const pool = new Pool({
-    connectionString:
-        process.env.DATABASE_URL ||
-        "postgresql://your-render-db-user:your-render-db-password@your-render-db-host:5432/your-render-db-name",
+    connectionString: process.env.DATABASE_URL,
     ssl: {
         rejectUnauthorized: false,
     },
 });
 
 async function setupRenderDatabase() {
+    if (!process.env.DATABASE_URL) {
+        throw new Error("DATABASE_URL 환경 변수가 설정되지 않았습니다.");
+    }
+
+    console.log("DATABASE_URL:", process.env.DATABASE_URL ? "설정됨" : "설정되지 않음");
+    
     const client = await pool.connect();
 
     try {
