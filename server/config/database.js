@@ -14,6 +14,7 @@ const pool = new Pool({
         process.env.NODE_ENV === "production"
             ? {
                   rejectUnauthorized: false,
+                  sslmode: "require",
               }
             : false,
     max: parseInt(process.env.DB_MAX_CONNECTIONS) || 20,
