@@ -2,7 +2,7 @@
 const API_BASE_URL =
     import.meta.env.VITE_API_BASE_URL ||
     (import.meta.env.PROD
-        ? "https://order-app-backend-y1gx.onrender.com/api"
+        ? "https://coffee-order-backend-2oss.onrender.com/api"
         : "http://localhost:3001/api");
 
 // 디버깅을 위한 로그 추가
